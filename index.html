@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0d1d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="The family's everything-desk: research, writing, Paperless game dev, physics, and Aetheria frequency work." />
+    <title>Aetheria Workbench</title>
+    <link rel="icon" href="./icons/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- left rail: the desks -->
+      <nav id="rail" aria-label="Desks">
+        <div class="brand"><img src="./icons/favicon.png" alt="" width="28" height="28" /><span>Aetheria</span></div>
+        <div id="desks"></div>
+        <div class="spacer"></div>
+        <button class="rail-mini" id="btn-files" title="Project files"><img src="./assets/desk-icons/files.png" alt="" />files</button>
+        <button class="rail-mini" id="btn-memory" title="Memory jar"><img src="./assets/desk-icons/memory.png" alt="" />jar</button>
+        <button class="rail-mini" id="btn-settings" title="Settings"><img src="./assets/desk-icons/settings.png" alt="" />set</button>
+        <button class="rail-mini" id="btn-diag" title="Diagnostics"><img src="./assets/desk-icons/diagnostics.png" alt="" />diag</button>
+      </nav>
+
+      <!-- centre: transcript and composer -->
+      <main id="center">
+        <header id="head">
+          <div class="title"><b id="desk-name">Research</b><span id="desk-tag"></span></div>
+          <button class="chip none" id="brain-chip" title="Which brain is live. Tap for the full model name."><span class="dot"></span><span id="brain-text">detecting…</span><span id="brain-ping" hidden></span></button>
+          <div class="grow"></div>
+          <div class="menu" id="menu">
+            <button id="btn-menu" title="This desk's menu">☰ <span class="l">desk</span></button>
+            <div class="dropdown" id="dropdown" hidden>
+              <button id="btn-think" title="Thinking mode for this desk (/think)">Thinking: <span id="think-state">on</span></button>
+              <button id="btn-detect-brain" title="Look for the lab, the in-app runtime and the device again">↻ Detect the brain again</button>
+              <button id="btn-read" title="Read the last reply aloud (/read)">🔈 Read the last reply</button>
+              <button id="btn-stage" title="Mira's stage with the last few messages under it (/stage)">◈ Mira's stage</button>
+              <button id="btn-chat" title="The whole chat history (/chat)">☷ Chat history</button>
+              <button id="btn-prompt" title="Read and change what this desk is told, or put it back to the default">✎ Edit this desk's prompt</button>
+              <button id="btn-desk-settings" title="This desk's voice, thinking default and read-aloud">⚙ This desk's settings</button>
+              <label class="menu-row">Model <select id="menu-model"></select></label>
+              <label class="menu-row">Brain
+                <select id="menu-brain">
+                  <option value="auto">auto</option>
+                  <option value="lab">lab</option>
+                  <option value="native">in-app</option>
+                  <option value="device">on-device</option>
+                </select>
+              </label>
+              <hr />
+              <button id="btn-export" title="Export this desk to .md (/export)">⤓ Export this desk as .md</button>
+              <button id="btn-handoff" title="Copy a brief for Claude Code (/handoff)">⇥ Brief for Claude Code</button>
+              <button id="btn-hermes" title="Send the last reply to Hermes (/hermes)">✉ Send the last reply to Hermes</button>
+              <button id="btn-mira" title="Open the voice companion in its own tab (/mira)">◉ Open the voice companion</button>
+              <hr />
+              <button id="btn-ambience" title="432 Hz bed and rain (/ambience)">♪ Ambience</button>
+              <button id="btn-theme" title="Paper theme (/paper)">◐ Paper theme</button>
+              <button id="btn-clear" class="danger" title="Clear this desk (/clear)">✕ Clear this desk</button>
+            </div>
+          </div>
+        </header>
+
+        <section id="stage-wrap">
+          <canvas id="stage-canvas"></canvas>
+          <div id="stage-hud">
+            <span class="chip" id="stage-state">idle</span>
+            <span class="chip" id="stage-regime">HEART</span>
+            <button class="chip ghost" id="btn-to-history" title="Chat history (the arrow up there brings the stage back)">▾</button>
+          </div>
+          <div id="stage-bark" hidden></div>
+        </section>
+
+        <section id="transcript">
+          <div id="history-hud"><button class="chip ghost" id="btn-to-stage" title="Mira's stage, with the last few messages under her (the arrow on the stage brings the history back)">▴</button></div>
+          <div id="empty">
+            <h2 id="empty-title">Research</h2>
+            <p id="empty-text"></p>
+            <div class="cmds" id="empty-cmds"></div>
+            <p class="fine">Ctrl+Enter sends · Esc stops · Ctrl+1…8 switches desks · drop an image on the composer for the vision model · drop files here to add them to this desk.</p>
+          </div>
+          <div id="messages"></div>
+        </section>
+
+        <footer id="composer">
+          <div class="inner">
+            <div id="palette" hidden></div>
+            <div id="attachments"></div>
+            <div class="box">
+              <textarea id="input" rows="2" placeholder="Ask, paste, or type / for the tools…"></textarea>
+              <button id="btn-image" title="Attach an image for the vision model">📷</button>
+              <input id="image-input" type="file" accept="image/*" multiple hidden />
+              <button id="btn-mic" title="Hold to talk (Silero + Moonshine). Hands-free in Settings.">🎙</button>
+              <button id="btn-send" class="primary" title="Send (Ctrl+Enter)">Send</button>
+              <button id="btn-stop" class="danger" title="Stop (Esc)" hidden>Stop</button>
+            </div>
+            <div id="status"></div>
+          </div>
+        </footer>
+      </main>
+
+      <!-- right drawer -->
+      <div id="drawer-backdrop" hidden></div>
+      <aside id="drawer" hidden>
+        <div class="tabs">
+          <button data-tab="files">Files</button>
+          <button data-tab="memory">Memory</button>
+          <button data-tab="settings">Settings</button>
+          <button data-tab="diagnostics">Diag</button>
+          <button id="btn-drawer-close" title="Close (Esc, or tap outside)">✕ close</button>
+        </div>
+
+        <div class="pane" id="pane-files" hidden>
+          <h2>Project files · <span id="files-desk"></span></h2>
+          <p class="fine">Drag a folder of .md, .txt, .pdf or .docx here. Text is extracted in the browser, chunked, embedded with EmbeddingGemma, and the best passages are given to the desk on every turn. Nothing is uploaded.</p>
+          <div class="drop" id="file-drop">drop files or a folder here<br /><span class="fine">or click to choose files</span></div>
+          <div class="btn-row"><button id="btn-pick-files">+ Files</button><button id="btn-pick-dir">+ Folder</button></div>
+          <input id="file-input" type="file" multiple hidden />
+          <input id="dir-input" type="file" webkitdirectory directory multiple hidden />
+          <p class="fine" id="file-status"></p>
+          <p class="fine" id="embed-status"></p>
+          <div id="file-list"></div>
+        </div>
+
+        <div class="pane" id="pane-memory" hidden>
+          <h2>Memory jar</h2>
+          <p class="fine">Notes you asked to keep (/remember, or this box), and the ones Mira jars herself on her desk: what you are working on, decisions, names, running jokes, never health or money; a small "jarred" chip marks the message. Every desk sees them. Delete any line here.</p>
+          <textarea id="memory-new" rows="2" placeholder="remember this…"></textarea>
+          <div class="btn-row"><button id="btn-memory-add" class="primary">Remember</button><button id="btn-memory-export">Export .md</button><button id="btn-memory-clear" class="danger">Empty the jar</button></div>
+          <div id="memory-list"></div>
+        </div>
+
+        <div class="pane" id="pane-settings" hidden>
+          <h2>Settings</h2>
+
+          <fieldset>
+            <legend>Lab · the brain at home</legend>
+            <label>Endpoint (OpenAI-compatible base URL)<input id="set-lab-url" type="url" placeholder="https://<id>.laresprime.olares.com/v1  or  http://khadas.local:4000/v1" /></label>
+            <label>API key <input id="set-lab-key" type="password" placeholder="any non-empty key for Model Console; LiteLLM's key" /></label>
+            <label>Model (exact name from the endpoint)<input id="set-lab-model" type="text" placeholder="unsloth/Qwen3.8-27B-GGUF:Q4_K_M" list="models-datalist" /></label>
+            <datalist id="models-datalist"></datalist>
+            <div class="btn-row"><button id="btn-test" class="primary">Test connection</button><button id="btn-detect">Detect brain again</button></div>
+            <div class="test-result" id="test-result"></div>
+            <div id="models-list" hidden></div>
+            <label>Which brain answers
+              <select id="set-brain">
+                <option value="auto">Auto: the lab, then the in-app runtime, else on-device</option>
+                <option value="lab">Lab only</option>
+                <option value="native">In-app runtime only (the Android app)</option>
+                <option value="device">On-device only (Gemma 4 E2B, WebGPU)</option>
+              </select>
+            </label>
+            <label>Thinking switch
+              <select id="set-thinkswitch">
+                <option value="auto">Auto: chat_template_kwargs, plus /think tags for Qwen models</option>
+                <option value="template">chat_template_kwargs only (llama.cpp, vLLM)</option>
+                <option value="tag">/think and /no_think tags only</option>
+                <option value="none">Do not send a switch</option>
+              </select>
+            </label>
+            <label>Temperature <span id="set-temp-val">0.7</span><input id="set-temp" type="range" min="0" max="1.5" step="0.05" value="0.7" /></label>
+            <label>Max reply tokens <input id="set-maxtok" type="number" min="128" max="16384" step="128" /></label>
+            <label>Turns of history sent <input id="set-turns" type="number" min="2" max="80" step="2" /></label>
+          </fieldset>
+
+          <fieldset id="native-fieldset" hidden>
+            <legend id="native-legend">Native runtime · llama.cpp inside this app</legend>
+            <p class="fine" id="nat-device">…</p>
+            <div id="nat-pc" hidden>
+              <p class="fine" id="nat-servers">…</p>
+              <div class="btn-row"><button id="nat-install-cuda" class="primary">Install the CUDA build</button><button id="nat-install-vulkan">Install the Vulkan build</button><button id="nat-install-cpu">Install the CPU build</button><button id="nat-pick-server">Use a llama-server.exe already here…</button><button id="nat-open-folder">Open the models folder</button></div>
+              <div class="bar" id="nat-inst-bar" hidden><div></div></div>
+              <p class="fine" id="nat-inst-status"></p>
+            </div>
+            <label>Model (a downloaded GGUF) <select id="nat-model"></select></label>
+            <p class="fine" id="nat-plan"></p>
+            <label>Context length <input id="nat-ctx" type="number" min="2048" max="131072" step="2048" /></label>
+            <label>GPU backend
+              <select id="nat-backend">
+                <option value="auto">Auto: OpenCL (Adreno), then Vulkan, then CPU</option>
+                <option value="opencl">OpenCL (Adreno)</option>
+                <option value="vulkan">Vulkan</option>
+                <option value="cpu">CPU only</option>
+              </select>
+            </label>
+            <label>Loading
+              <select id="nat-loadmode">
+                <option value="auto">Auto: into memory when the model fits with room, mapped from storage when it is tight or too big</option>
+                <option value="resident">Into memory (no mmap): steady speed; the model has to fit</option>
+                <option value="mapped">Mapped from storage (mmap): a model bigger than the RAM still runs, slowly</option>
+              </select>
+            </label>
+            <label>Mixture-of-experts weights
+              <select id="nat-cpumoe">
+                <option value="auto">Auto: experts on the CPU, the rest on the GPU, when the model is a MoE</option>
+                <option value="on">Always keep the experts on the CPU</option>
+                <option value="off">Never (everything on the GPU)</option>
+              </select>
+            </label>
+            <label class="row"><input id="nat-keepalive" type="checkbox" checked /> Keep the server up in the background: a notification with a Stop button holds it while you are in another app (Mira in Chrome talks to it at http://127.0.0.1:8080/v1)</label>
+            <div class="btn-row"><button id="nat-start" class="primary">Start the server</button><button id="nat-stop">Stop</button><button id="nat-refresh">Refresh</button></div>
+            <p class="fine" id="nat-status"></p>
+            <p class="fine" id="nat-tts"></p>
+            <h3>Models to download</h3>
+            <p class="fine" id="nat-dl-note">One tap downloads into this app's storage and starts the server. Keep the app open while it downloads; an interrupted download resumes where it stopped when you tap again.</p>
+            <div id="nat-catalog"></div>
+            <label>Or any GGUF by URL <input id="nat-url" type="url" placeholder="https://huggingface.co/<org>/<repo>/resolve/main/<model>-Q4_K_M.gguf" /></label>
+            <div class="btn-row"><button id="nat-download">Download</button><button id="nat-pick">Use a GGUF already on the phone</button><button id="nat-delete" class="danger">Delete the selected model</button></div>
+            <div class="bar" id="nat-dl-bar" hidden><div></div></div>
+            <p class="fine" id="nat-dl-status"></p>
+            <p class="fine" id="nat-pick-note">A file picked from the phone is copied into this app's storage (the server needs a plain path), so keep that much room free; the original can go afterwards.</p>
+            <pre id="nat-log" class="test-result"></pre>
+          </fieldset>
+
+          <fieldset>
+            <legend>This desk · <span id="set-desk-name"></span></legend>
+            <label class="row"><input id="set-desk-thinking" type="checkbox" /> Thinking mode on (long-form reasoning; rendered collapsed, never read aloud)</label>
+            <label class="row"><input id="set-desk-autoread" type="checkbox" /> Read every reply aloud</label>
+            <label>Voice for this desk <select id="set-desk-voice"></select></label>
+            <label>System prompt (from prompts/&lt;desk&gt;.md; edit here to override on this device)<textarea id="set-desk-prompt" rows="12" spellcheck="false"></textarea></label>
+            <div class="btn-row"><button id="btn-prompt-reset">Reset to the file</button></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Mira</legend>
+            <label class="row"><input id="set-stage" type="checkbox" checked /> Her stage across the top of the desk</label>
+            <label class="row"><input id="set-mira-everywhere" type="checkbox" checked /> On every desk, the street behind her following the desk (off: only on her own desk, and each desk reads in its own voice)</label>
+            <label class="row"><input id="set-stage-scene" type="checkbox" checked /> The street behind her (off: a plain ground)</label>
+            <label class="row"><input id="set-stage-storm" type="checkbox" checked /> Rain, gusts and lightning</label>
+            <label class="row"><input id="set-stage-smoke" type="checkbox" checked /> A smoke break and a nap when it has been quiet a long while</label>
+            <label class="row"><input id="set-mira-initiate" type="checkbox" checked /> She speaks up herself after a quiet spell (a line from the model picking up the last exchange, or a thought of her own; spoken if the voice is loaded, three times at most until you answer)</label>
+            <label class="row"><input id="set-mira-barks" type="checkbox" checked /> Quick reactions while she reads what you sent: the model riffs a fresh one-liner in her voice (a short call, two and a half seconds at most), her own bank ("Sheesh." "Get a load of this guy.") fills in when the box is slow or asleep; a bubble over the stage, spoken if the voice is loaded</label>
+            <label>Persona length on her desk
+              <select id="set-mira-persona">
+                <option value="auto">Auto: the core on the lab, long on an in-app model of 12B or more, standard otherwise</option>
+                <option value="short">Short (about 480 tokens; a phone's on-device brain)</option>
+                <option value="standard">Standard (about 900 tokens; the core, condensed)</option>
+                <option value="long">Long (about 1,200 tokens; the bible without the samples)</option>
+                <option value="core">Core (about 2,700 tokens; the whole core with the calibration samples, for the lab)</option>
+              </select>
+            </label>
+            <p class="fine" id="set-mira-persona-note"></p>
+            <label>Reply length on her desk
+              <select id="set-mira-length">
+                <option value="auto">Auto: fuller on the home lab, quips on a small model</option>
+                <option value="short">Short quips, three to six sentences</option>
+                <option value="full">Full replies, up to a dozen sentences</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Open mic · her stage</legend>
+            <label class="row"><input id="set-mic-room-on" type="checkbox" checked /> The room: a crowd that laughs on the punchlines and the end of a bit, applauds the bow, and a club murmuring behind her (recorded laughter, public domain and CC BY; the club bed is synthesized)</label>
+            <label>Room volume <span id="set-mic-room-val">15</span><input id="set-mic-room" type="range" min="0" max="100" step="5" value="15" /></label>
+            <label class="row"><input id="set-mic-rain" type="checkbox" checked /> Rain ambience, low, behind the set</label>
+            <label class="row"><input id="set-mic-inside" type="checkbox" checked /> The rain heard from inside the club: muffled through the wall and the window, thunder as a rumble (off: the street)</label>
+            <label>Record's video file
+              <select id="set-mic-video">
+                <option value="auto">Auto: the stage's own MP4 (H.264, hardware on the phone) where the browser can encode it, the browser's WebM where it cannot</option>
+                <option value="mp4">MP4 only (the stage's own recorder)</option>
+                <option value="webm">WebM (the browser's recorder; plays in Chrome and most players, converts on the PC with ffmpeg)</option>
+              </select>
+            </label>
+            <label class="row"><input id="set-mic-bed" type="checkbox" /> The 432 Hz bed under the set (off by default)</label>
+            <label class="row"><input id="set-mic-smoke" type="checkbox" checked /> She smokes on the stage: a drag between bits (the gap between bits stretches to fit it) and now and then while she waits</label>
+            <label class="row"><input id="set-mic-clean" type="checkbox" /> Clean edit: the same set with the profanity swapped for her bar slang (/clean)</label>
+            <label class="row"><input id="set-suno-longform" type="checkbox" /> Long form on the Suno desk: four or five verses for a story song, never fewer than three (/longform)</label>
+            <label>Stage shape
+              <select id="set-mic-aspect">
+                <option value="auto">Auto: 9:16 on a portrait screen, 16:9 on a landscape one</option>
+                <option value="9:16">9:16 (vertical, for the phone)</option>
+                <option value="16:9">16:9 (desktop)</option>
+              </select>
+            </label>
+            <p class="fine">Record on the stage saves a .webm clip (VP9/Opus; Safari gives MP4) and a cutscene package (.zip: manifest.json, set.md, one 24 kHz WAV per line) for the game's <code>cutscene/</code> player. Every line's audio is cached by text, so replaying or re-recording never synthesizes twice. <button id="btn-clear-audio" class="ghost">Clear the audio cache</button></p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Voice</legend>
+            <label>Default reading voice (Kokoro) <select id="set-voice-default"></select></label>
+            <label>Mira's voice <select id="set-voice-mira"></select></label>
+            <label>Speed <span id="set-tts-speed-val">1.00</span><input id="set-tts-speed" type="range" min="0.7" max="1.4" step="0.05" value="1" /></label>
+            <label>Voice runs on <select id="set-tts-device"><option value="auto">GPU (fastest)</option><option value="cpu">CPU (leaves the GPU to the model)</option></select></label>
+            <label>Mira's voice engine
+              <select id="set-tts-engine">
+                <option value="auto">Auto: Qwen3-TTS as Bella for the stage and packages when it is reachable, Kokoro for live replies</option>
+                <option value="qwen">Qwen3-TTS as Bella everywhere she speaks (slower than real time; replies come sentence by sentence)</option>
+                <option value="kokoro">Kokoro only</option>
+              </select>
+            </label>
+            <label>Qwen voice server on the PC <input id="set-qwen-url" type="text" placeholder="http://127.0.0.1:8123" spellcheck="false" /></label>
+            <p class="fine" id="set-qwen-note">tools/qwen_tts_server.py serves her Bella clone on the PC; inside the app on the phone the in-app runtime's llama-tts answers with the 0.6B model instead. Kokoro stays the fallback when neither is up.</p>
+            <label>Listening <select id="set-voice-input"><option value="ptt">Push to talk (hold the mic)</option><option value="vad">Hands-free (tap the mic; Silero listens)</option></select></label>
+            <label>Mic sensitivity <span id="set-sens-val">50</span><input id="set-sens" type="range" min="0" max="100" step="5" value="50" /></label>
+            <label>Transcripts <select id="set-stt"><option value="tiny">Moonshine tiny (about 80 MB)</option><option value="base">Moonshine base (better on quiet speech; takes effect after a reload)</option></select></label>
+            <p class="fine">Voices load on first use (Kokoro about 330 MB on the GPU, 92 MB on the CPU; Silero 2 MB; Moonshine 80 MB). Cached after that.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Look and sound</legend>
+            <label>Theme <select id="set-theme"><option value="district">District (the desk's aura colours)</option><option value="paper">Paper (for long reading)</option></select></label>
+            <label class="row"><input id="set-ambience" type="checkbox" /> Ambience: the 432 Hz synth bed and the rain (off by default; this is a work tool)</label>
+            <label>Ambience volume <span id="set-amb-vol-val">35</span><input id="set-amb-vol" type="range" min="0" max="100" step="5" value="35" /></label>
+            <label class="row"><input id="set-rain" type="checkbox" checked /> Rain with the bed</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Handoff, search, Mira</legend>
+            <label>Hermes: Discord webhook URL <input id="set-hermes" type="url" placeholder="https://discord.com/api/webhooks/…" /></label>
+            <label>Research: web-search model on the lab (blank = offline) <input id="set-search-model" type="text" placeholder="perplexity/sonar  (a LiteLLM model name)" /></label>
+            <label>Mira URL (blank = auto) <input id="set-mira-url" type="url" placeholder="https://big-banana-studios.github.io/aetheria-companion/" /></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Hardware</legend>
+            <div class="btn-row"><button id="btn-probe" class="primary">Probe this device</button><button id="btn-apply-rec" hidden>Apply the recommended settings</button></div>
+            <div class="test-result" id="hw-info"></div>
+            <ul id="hw-notes"></ul>
+          </fieldset>
+
+          <fieldset>
+            <legend>Storage</legend>
+            <p class="fine" id="storage-info"></p>
+            <div class="btn-row"><button id="btn-purge-models">Delete downloaded models</button><button id="btn-delete-all" class="danger">Delete everything</button></div>
+            <p class="fine">Delete everything removes every conversation, the memory jar, the project files, the settings and the cached models from this browser.</p>
+          </fieldset>
+        </div>
+
+        <div class="pane" id="pane-diagnostics" hidden>
+          <h2>Diagnostics</h2>
+          <div id="diag"></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Mira's open mic: the full-screen stage -->
+    <div id="mic" hidden>
+      <div class="mic-top">
+        <b id="mic-title">Open mic</b>
+        <span class="chip" id="mic-pose">idle</span>
+        <button id="mic-aspect" class="ghost" title="9:16 for the phone, 16:9 for the desktop">9:16</button>
+        <button id="mic-close" class="ghost x" title="Close (Esc, or the back gesture)">✕</button>
+      </div>
+      <div id="mic-box" data-aspect="9:16"><canvas id="mic-canvas"></canvas></div>
+      <div class="mic-bar">
+        <button id="mic-play" class="primary">▶ Play set</button>
+        <button id="mic-pause" hidden>⏸ Pause</button>
+        <button id="mic-skip" title="Skip to the next bit">⏭ Skip bit</button>
+        <button id="mic-rec" title="Record: the video clip and the cutscene package, from the top">● Record</button>
+        <span class="fine" id="mic-status"></span>
+      </div>
+      <details class="mic-audio-panel" id="mic-audio-panel">
+        <summary title="The stage's sound: the crowd, the rain and the bed">🔊 audio</summary>
+        <div class="mic-audio-row">
+          <label class="mic-room" title="The room: the crowd, its laughs on the punchlines and the club behind them; the box switches it off, the slider sets how much"><input id="mic-room-on" type="checkbox" checked /> room <input id="mic-room" type="range" min="0" max="100" step="5" value="15" /></label>
+          <label title="Rain, low, behind the set"><input id="mic-rain-on" type="checkbox" checked /> rain</label>
+          <label title="Inside: the rain muffled through the wall and the window, thunder as a rumble; outside: the street"><input id="mic-rain-inside" type="checkbox" checked /> inside</label>
+          <label title="The 432 Hz bed under the set"><input id="mic-bed-on" type="checkbox" /> 432 bed</label>
+          <label title="Record's file: auto makes the stage's own MP4 where the browser can encode H.264 and WebM where it cannot; webm forces the browser's WebM (it plays in Chrome and most players)">video
+            <select id="mic-video"><option value="auto">auto</option><option value="mp4">mp4</option><option value="webm">webm</option></select>
+          </label>
+        </div>
+      </details>
+      <div class="mic-heckle">
+        <input id="mic-heckle" type="text" placeholder="heckle her… (crowd work, two lines back)" />
+        <button id="mic-heckle-send">Heckle</button>
+        <button id="mic-audio" class="ghost" title="The whole set as one audio file: every line rendered (the phone's Qwen voice or Kokoro, cached) and laid on the timeline, the voice alone; into Downloads on the phone">⤓ Audio</button>
+        <button id="mic-pkg" class="ghost" title="The cutscene package on its own: manifest.json, set.md, audio/*.wav">⤓ Package</button>
+      </div>
+      <p class="fine" id="mic-export-status"></p>
+    </div>
+
+    <!-- The desk's prompt -->
+    <dialog id="prompt-dialog">
+      <h2>Prompt · <span id="pd-desk"></span> <button id="pd-close" class="ghost x">✕</button></h2>
+      <p class="fine">This is what the desk is told before every turn. Edit it here for this device, or put it back to the default from <code>prompts/&lt;desk&gt;.md</code>. The memory jar, the desk's reference files, the retrieved project passages and the workbench notes are added after it automatically.</p>
+      <textarea id="pd-text" rows="18" spellcheck="false"></textarea>
+      <p class="fine" id="pd-status"></p>
+      <div class="btn-row end"><button id="pd-reset">Reset to default</button><button id="pd-cancel" class="ghost">Cancel</button><button id="pd-save" class="primary">Save</button></div>
+    </dialog>
+
+    <!-- Sprite-sheet inspector -->
+    <dialog id="sprite-dialog">
+      <h2>Sprite-sheet inspector <button id="sprite-close" class="ghost x">✕</button></h2>
+      <p class="fine">Drop a PNG. The grid is measured here; the vision model reads the frames; the result is a draft manifest in Mira's format (courier.json). Check every clip against the sheet before you trust it.</p>
+      <div class="drop" id="sprite-drop">drop a sprite sheet here, or click to choose</div>
+      <input id="sprite-input" type="file" accept="image/png,image/webp,image/gif" hidden />
+      <div class="grid" id="sprite-grid" hidden>
+        <div>
+          <canvas id="sprite-canvas"></canvas>
+          <div class="measure" id="sprite-measure"></div>
+        </div>
+        <div>
+          <div class="fields">
+            <label>Frame width <input id="sp-fw" type="number" min="4" /></label>
+            <label>Frame height <input id="sp-fh" type="number" min="4" /></label>
+            <label>Character / pack name <input id="sp-name" type="text" /></label>
+            <label>Scale <select id="sp-scale"><option value="1">1×</option><option value="2">2×</option><option value="0.5">½</option><option value="0.25">¼</option></select></label>
+          </div>
+          <div class="btn-row"><button id="sp-remeasure">Re-measure</button><button id="sp-ask" class="primary">Ask the vision model</button><button id="sp-draft">Draft without the model</button></div>
+          <p class="fine" id="sp-status"></p>
+          <pre id="sp-json"></pre>
+          <div class="btn-row"><button id="sp-download">Download manifest .json</button><button id="sp-copy">Copy</button></div>
+        </div>
+      </div>
+    </dialog>
+
+    <div id="dl" hidden></div>
+    <div id="toast" hidden></div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

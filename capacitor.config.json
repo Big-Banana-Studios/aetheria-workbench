@@ -1,0 +1,13 @@
+{
+  "appId": "com.bigbananastudios.aetheriaworkbench",
+  "appName": "Aetheria Workbench",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0c0d1d"
+  }
+}

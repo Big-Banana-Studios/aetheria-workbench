@@ -1,0 +1,32 @@
+node_modules/
+dist/
+.vite/
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+public/ort/
+shots/
+.chrome-test-profile/
+__pycache__/
+# Android shell (Capacitor)
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/app/src/main/jniLibs/
+native/llama.cpp/
+native/OpenCL-*/
+
+# signing (never commit)
+android/keystore/
+android/keystore.properties
+
+# cutscene packages made on the PC (tools/make_package.mjs)
+sets/packages/

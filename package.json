@@ -1,0 +1,37 @@
+{
+  "name": "aetheria-workbench",
+  "private": true,
+  "version": "0.3.20",
+  "type": "module",
+  "description": "The family's everything-desk: research, writing, Paperless game dev, physics, and Aetheria frequency work, in front of the lab's LiteLLM box with an on-device fallback. Third sibling of the Aetheria Reader and Mira.",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "node tools/copy_ort.mjs",
+    "prebuild": "node tools/copy_ort.mjs",
+    "predev": "node tools/copy_ort.mjs",
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "serve": "npx serve dist -l 5180",
+    "check": "node tools/smoke.mjs",
+    "pc": "node tools/pc_runtime.mjs",
+    "cube": "python tools/build_cube.py",
+    "icons": "python tools/cut_icons.py",
+    "apk": "npm run build && node tools/pack_native.mjs && npx cap sync android && cd android && gradlew assembleRelease",
+    "apk:serve": "npx serve android/app/build/outputs/apk/release -l 5181"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@huggingface/transformers": "4.2.0",
+    "dompurify": "^3.2.6",
+    "katex": "^0.16.22",
+    "kokoro-js": "1.2.1",
+    "marked": "^15.0.12",
+    "mp4-muxer": "^5.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
+    "vite": "^7.1.0"
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aetheria Workbench</string>
+    <string name="title_activity_main">Aetheria Workbench</string>
+    <string name="package_name">com.bigbananastudios.aetheriaworkbench</string>
+    <string name="custom_url_scheme">com.bigbananastudios.aetheriaworkbench</string>
+</resources>
