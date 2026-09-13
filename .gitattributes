@@ -1,0 +1,10 @@
+# Auto detect text files and perform LF normalization (same as the Reader)
+* text=auto
+
+# Shell scripts stay LF on every checkout (Git Bash, the phone build)
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Windows launchers stay CRLF (cmd.exe)
+*.cmd text eol=crlf
+*.bat text eol=crlf
