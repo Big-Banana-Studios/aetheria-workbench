@@ -212,7 +212,7 @@ ok("lab client reaches a LAN box through Chrome's local-network permission; only
     assert.match(text, /never a slur|never slurs/i, `${k}: the guardrail`);
     assert.match(text, /box art/, `${k}: the box-art wink`);
     assert.match(text, /memory jar/i, `${k}: the jar`);
-    assert.match(text, /not angry|never bitter/, `${k}: entertained, not angry`);
+    assert.match(text, /not angry|never bitter|no self-pity|never self-pity/, `${k}: entertained, not angry, no self-pity`);
     assert.match(text, /[Nn]ever name a comedian|No naming comedians/, `${k}: no comedian named, as a rule`);
     assert.doesNotMatch(text, /Carlin|Stanhope|Hicks|Pryor|Katt|Williams|Murphy/i, `${k} names no comedians`);
     assert.doesNotMatch(text, /Undercity|courier from Paperless|scanners?\b|Frank the ferret|envelope patch/i, `${k}: no game lore`);
@@ -233,7 +233,9 @@ ok("lab client reaches a LAN box through Chrome's local-network permission; only
   const mic = readFileSync(join(root, "prompts/open-mic.md"), "utf8");
   assert.match(mic, /^You are Mira, on the stage of a dive-bar open mic/);
   assert.match(mic, /The mouth on you\./);
-  assert.match(mic, /^Gloves off\. You are a woman who gives no fucks/m, "the default stage voice (gloves off)");
+  assert.match(mic, /^Fuck it: gather round the dumpster fire/m, "the default stage voice (the dumpster fire, 0.3.21)");
+  assert.match(mic, /does not say please and does not bend the knee/, "the badass bitch");
+  assert.match(mic, /The filth has no off switch/, "the mouth, no off switch");
   assert.match(mic, /^- Nothing soft: no apology/m, "the no-softening rule of a bit");
   assert.match(mic, /lil dick energy/, "she calls it out");
   assert.match(mic, /Never name a comedian/);
@@ -254,11 +256,22 @@ ok("lab client reaches a LAN box through Chrome's local-network permission; only
   const { VOICES, applyVoice, voiceOf } = await import("../src/openmic/voices.js");
   const { measure, benchTable } = await import("../src/openmic/bench.js");
   const mic = readFileSync(join(root, "prompts/open-mic.md"), "utf8");
-  assert.match(voiceOf(mic), /^Who you are up here\.\nGloves off\./, "the file's voice sits between the markers");
+  assert.match(voiceOf(mic), /^Who you are up here\.\nFuck it: gather round the dumpster fire/, "the file's voice sits between the markers");
+  assert.match(VOICES.gloves.text, /^Who you are up here\.\nGloves off\. You are a woman who gives no fucks/, "the 0.3.15 default survives as the gloves dial");
+  // no sample bits in the stage prompt (0.3.21): the old two ran 0.2 swears per 100 words and set the register, and a 4B pastes any sample back as the set; the register is checked in words instead
+  assert.match(mic, /^The register, checked\./m, "the register check replaces the sample bits");
+  assert.doesNotMatch(mic, /^\(Story bit|^\(The surgical gear|^\(The open/m, "no sample bits to copy");
+  assert.match(mic, /A \(beat\) is rare: two a bit at most/, "the beat rule");
+  assert.match(mic, /three or more in every bit/, "the mouth's floor per bit");
+  // the register lines live in mira-core.md (the lab's persona); the bench guards their mouth so they cannot go beige unnoticed
+  const core = readFileSync(join(root, "prompts/mira-core.md"), "utf8");
+  const lines = core.slice(core.indexOf("**On stage (the leash off"));
+  const sm = measure("# x\n\n## Bit 1 — x\n" + lines.split("\n").slice(1).join("\n"));
+  assert.ok(sm.swearsPer100 >= 1.5 && sm.swearWords >= 5, `the core's stage lines swear like the stage says (${sm.swearsPer100}/100, ${sm.swearWords} distinct)`);
   for (const [k, v] of Object.entries(VOICES)) {
     const swapped = applyVoice(mic, v.text);
     assert.equal(voiceOf(swapped).trim(), v.text.trim(), `${k} swaps in`);
-    assert.ok(swapped.includes("The rules of a bit.") && swapped.includes("The register, by example."), `${k} keeps the rules and the samples`);
+    assert.ok(swapped.includes("The rules of a bit.") && swapped.includes("The register, checked."), `${k} keeps the rules and the samples`);
     assert.match(v.text, /Never a slur/, `${k} keeps the guardrail`);
   }
   const m = measure("# T\n\n## Bit 1 — x\nThe fucking landlord calls it cozy. It smells like a wet dog in a warm car. {aside: The light buzzes.} Shit, I paid for it.\n");
@@ -378,6 +391,7 @@ ok("nine prompts, the bible, eight desk icons");
   assert.deepEqual(set.lintLocal(s), []);
   const twice = set.parseSet(md.replace("{aside} That light", "{aside} That light has been buzzing all night. {aside} The floor smells of rain. That light"));
   assert.ok(set.lintLocal(twice).some((p) => p.rule === "one aside per bit"), "two asides in a bit are caught");
+  assert.ok(set.lintLocal(set.parseSet(["## Bit 1", "One. Two.", "", "## Bit 2", "Three. {aside: the bulb.} Four.", "", "## Bit 3", "Five. Six."].join(String.fromCharCode(10)))).filter((p) => p.rule === "one aside per bit").length === 2, "a bit with no aside is caught in a set of three or more");
   assert.ok(set.lintLocal(s, set.paragraphHashes(md)).some((p) => p.rule === "no repeated paragraphs"), "a paragraph from an earlier set is caught by hash");
   assert.ok(set.lintLocal(set.parseSet("## Bit 1\nOne. {wave} Two.")).some((p) => p.rule === "pose vocabulary"));
   assert.ok(set.lintLocal(set.parseSet("## Bit 1\nOne. Two. Three. Just kidding, y'all.")).some((p) => p.rule === "no softening" && /just kidding/i.test(p.note)), "a wink is caught");
@@ -421,6 +435,18 @@ ok("nine prompts, the bible, eight desk icons");
     const own = set.parseSet("# T\n\n## Bit 1 — x\nThe rent went up. {aside: a quiet remark. You can put that aside.} The apartment did not.\n");
     assert.equal(own.bits[0].lines.filter((l) => /put that aside/i.test(l.text)).length, 1, "a tag the model wrote itself is not doubled");
     assert.equal(set.stripTags("A {aside: quiet remark} B {pace} C"), "A quiet remark B C");
+    // 0.3.22: what a 4B does with asides on the real stage prompt, and what the parser makes of it
+    const said = set.parseSet("# T\n\n## Bit 1 — x\nThe rent went up. {aside: That bulb is buzzing again.} (beat) You can put that aside. The apartment did not.\n");
+    assert.deepEqual(said.bits[0].lines.map((l) => [l.pose, !!l.tagLine, l.spoken]), [[null, false, "The rent went up."], ["aside", false, "That bulb is buzzing again."], ["aside", true, "You can put that aside."], [null, false, "The apartment did not."]], "her own tag line after the braces is the tag, not a second one");
+    const mid = set.parseSet("# T\n\n## Bit 1 — x\nAnd if you look up at that bulb, {aside: it's blinking again.} (beat) You realize.\n");
+    assert.deepEqual(mid.bits[0].lines.map((l) => [l.pose, l.spoken]), [[null, "And if you look up at that bulb,"], ["aside", "it's blinking again."], ["aside", "You can put that aside."], [null, "You realize."]], "an aside dropped mid-sentence starts its own line; the lead-in keeps her voice");
+    const back = set.parseSet("# T\n\n## Bit 1 — x\nOne. {aside: That bulb is buzzing again, like it wants a word.} Two.\n\n## Bit 2 — closer\nThree. {aside: That bulb is buzzing again, like it wants a word.} {aside: The floor is sticky.} Four.\n");
+    assert.equal(back.bits[1].asides, 1, "an earlier bit's aside brought back as a tag in the closer is a callback, not an aside");
+    assert.deepEqual(back.bits[1].lines.map((l) => [l.pose, l.aside, l.spoken]), [[null, false, "Three."], [null, false, "That bulb is buzzing again, like it wants a word."], ["aside", true, "The floor is sticky."], ["aside", true, "You can put that aside."], [null, false, "Four."]]);
+    const notes = set.parseSet("# T\n\n## Bit 1 — x\nOne. Two.\n\n***\n\n*   **Bit 1:** Added: {aside: The bulb.}\n*   **Closer:** Connected all three asides.\n");
+    assert.equal(notes.bits.length, 1, "a notes list after the set is not a bit");
+    assert.equal(notes.lines.filter((l) => l.aside).length, 0, "and its asides are not performed");
+    assert.equal(set.parseSet("# T\n\n## Bit 1 — x\nOne. {aside: The bulb again.} (You can put that aside.) Two.\n").bits[0].lines.filter((l) => /put that aside/i.test(l.text)).length, 1, "the tag written as a direction is not shown twice");
     assert.deepEqual(set.lintLocal(s), [], "the inline form trips no local rule");
     // the runtime against the minutes asked for: short flagged (extend the bits), long flagged (cut), on target quiet, no target no rule
     assert.ok(set.lintLocal(s, [], { target: s.runtime * 2 }).some((p) => p.rule === "runtime" && /extend the bits/.test(p.note)), "a short set is flagged");

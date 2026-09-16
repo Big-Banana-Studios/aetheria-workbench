@@ -1,7 +1,7 @@
 {
   "name": "aetheria-workbench",
   "private": true,
-  "version": "0.3.20",
+  "version": "0.3.22",
   "type": "module",
   "description": "The family's everything-desk: research, writing, Paperless game dev, physics, and Aetheria frequency work, in front of the lab's LiteLLM box with an on-device fallback. Third sibling of the Aetheria Reader and Mira.",
   "license": "MIT",

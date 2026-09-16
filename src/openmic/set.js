@@ -114,9 +114,13 @@ export function paragraphs(md) {
  */
 export function splitLines(paragraph, bit = 0, { asideTag = ASIDE_TAG } = {}) {
   const raw = [];
-  const sp = new SentenceSplitter((s) => raw.push(s), { minChars: 6 });
-  sp.push(inlineTags(String(paragraph || "")).replace(/\s*\n\s*/g, " "));
-  sp.close();
+  // a tag dropped into the middle of a sentence ("…look up at that bulb, {aside} it's blinking again") starts a new line there: the lead-in keeps her voice, the remark alone gets the pose
+  for (const seg of splitAtMidSentenceTags(inlineTags(String(paragraph || "")).replace(/\s*\n\s*/g, " "))) {
+    const sp = new SentenceSplitter((s) => raw.push(s), { minChars: 6 });
+    sp.push(seg);
+    sp.close();
+  }
+  const same = (a, b) => normWords(a) === normWords(b);
   const out = [];
   let carry = null;
   for (const s of raw) {
@@ -133,6 +137,7 @@ export function splitLines(paragraph, bit = 0, { asideTag = ASIDE_TAG } = {}) {
     }
     // a direction on its own, "(beat)" or "(she waits)": a pause, shown but not said
     const direction = !spoken;
+    if (direction && asideTag && same(text.replace(/^\(|\)$/g, ""), asideTag)) continue; // "(You can put that aside.)" written as a direction: the stage says it, not the screen
     out.push({ bit, text, spoken, pose: pose || null, aside: pose === "aside", asideCont: cont, direction });
   }
   if (!asideTag) return out;
@@ -144,9 +149,44 @@ export function splitLines(paragraph, bit = 0, { asideTag = ASIDE_TAG } = {}) {
     res.push(cur);
     const next = out[i + 1];
     const runEnds = cur.aside && !cur.direction && !(next && next.aside && next.asideCont);
-    if (runEnds && !already.test(cur.spoken)) res.push({ bit, text: asideTag, spoken: asideTag, pose: "aside", aside: true, asideCont: true, tagLine: true, direction: false });
+    if (!runEnds || already.test(cur.spoken)) continue;
+    // the model wrote the tag itself as the next sentence (a 4B does, whatever the prompt says): that line is the tag, not a second one
+    const own = [next, next?.direction ? out[i + 2] : null].find((l) => l && !l.aside && !l.direction && same(l.spoken, asideTag));
+    if (own) Object.assign(own, { text: asideTag, spoken: asideTag, pose: "aside", aside: true, asideCont: true, tagLine: true });
+    else res.push({ bit, text: asideTag, spoken: asideTag, pose: "aside", aside: true, asideCont: true, tagLine: true, direction: false });
   }
   return res;
+}
+
+/** Words only, lower case: the text as the ear hears it, for comparing lines. */
+function normWords(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * The paragraph cut where a pose tag sits mid-sentence: the text before the
+ * tag becomes its own segment (a fragment line in her normal voice), so the
+ * pose applies to the remark alone. A tag at a sentence start, after a
+ * direction, or as an aside's continuation cuts nothing.
+ */
+function splitAtMidSentenceTags(text) {
+  const out = [];
+  let start = 0;
+  const re = /\{(?:pace|lean|shriek|deadpan|aside\+?)\}/gi;
+  let m;
+  while ((m = re.exec(text))) {
+    const before = text.slice(start, m.index).replace(/\([^)]{0,120}\)/g, "").replace(ANY_TAG, "").trim();
+    if (before && !/[.!?…]["”'’)]*$/.test(before)) {
+      out.push(text.slice(start, m.index));
+      start = m.index;
+    }
+  }
+  out.push(text.slice(start));
+  return out.filter((s) => s.trim());
 }
 
 const BIT_HEAD = /^(?:#{2,4}\s*|\*\*)?(?:bit\s*)?(\d{1,2})\s*[.:)—–-]*\s*(.*?)\**\s*$/i;
@@ -210,6 +250,12 @@ export function parseSet(md, { asideTag = ASIDE_TAG } = {}) {
       continue;
     }
     if (/^\**(runtime|estimated runtime|length)\**\s*:/i.test(t)) continue;
+    // a notes list the model adds after the set without a heading ("**Notes:**", "*   **Bit 2:** Added: …", "- cut: restated thesis (bit 3)"): not performed
+    if (/^\**\s*notes?\s*:?\s*\**$/i.test(t) || /^[-*•]\s+\**\s*(bit\s*\d|aside\s*\d|closer|cut|added|moved|kept|changed?|notes?)\b/i.test(t)) {
+      cur = null;
+      skip = true;
+      continue;
+    }
     if (!cur) push("");
     cur.text += (cur.text.endsWith("\n") || !cur.text ? "" : " ") + t + "\n";
   }
@@ -218,6 +264,30 @@ export function parseSet(md, { asideTag = ASIDE_TAG } = {}) {
     b.lines = [];
     for (const p of paragraphs(b.text)) b.lines.push(...splitLines(p, b.n, { asideTag }));
     b.words = countWords(b.text);
+  }
+  // the closer brings the earlier asides back; a 4B brings them back as new {aside: …} tags, and she would lean in and tag each one again.
+  // An aside whose remark an earlier bit already made is a callback: said in her own voice, no lean, no tag.
+  const seen = new Set(); // six-word shingles of every earlier aside
+  const shingles = (s) => {
+    const w = normWords(s).split(" ").filter(Boolean);
+    const out = [];
+    for (let i = 0; i + 6 <= w.length; i++) out.push(w.slice(i, i + 6).join(" "));
+    return out.length ? out : [w.join(" ")];
+  };
+  for (const b of bits) {
+    const mine = [];
+    for (let i = 0; i < b.lines.length; i++) {
+      const l = b.lines[i];
+      if (!l.aside || l.asideCont) continue;
+      let j = i + 1;
+      while (j < b.lines.length && b.lines[j].aside && b.lines[j].asideCont && !b.lines[j].tagLine) j++;
+      const sh = shingles(b.lines.slice(i, j).map((x) => x.spoken).join(" "));
+      if (sh.some((k) => seen.has(k))) {
+        for (let k = i; k < j; k++) Object.assign(b.lines[k], { aside: false, asideCont: false, pose: null });
+        if (b.lines[j]?.tagLine) b.lines.splice(j, 1);
+      } else mine.push(...sh);
+    }
+    for (const k of mine) seen.add(k);
     b.asides = b.lines.filter((l) => l.aside && !l.asideCont).length; // a two-sentence {aside: …} is one aside
   }
   const kept = bits.filter((b) => b.lines.length);
@@ -287,6 +357,7 @@ export function lintLocal(set, previousHashes = [], { target = null } = {}) {
   }
   for (const b of set.bits) {
     if (b.asides > 1) problems.push({ rule: "one aside per bit", bit: b.n, note: `${b.asides} {aside} lines in bit ${b.n}; keep one` });
+    else if (b.asides === 0 && set.bits.length >= 3) problems.push({ rule: "one aside per bit", bit: b.n, note: `no {aside: …} in bit ${b.n}; add one, a sentence or two about this actual room, standing between two sentences` });
     const spoken = b.lines.filter((l) => !l.direction);
     if (spoken.length >= 4) {
       const last = spoken[spoken.length - 1];

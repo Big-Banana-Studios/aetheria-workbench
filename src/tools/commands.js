@@ -282,7 +282,7 @@ export const COMMANDS = [
     id: "dialin",
     desks: ["openmic"],
     usage: "/dialin [about]",
-    about: "dial the stage voice in: one two-minute brief through every voice (the file's, stoic filth, two gears, raw storyteller), side by side with numbers, and a button to make the pick the desk's prompt",
+    about: "dial the stage voice in: one two-minute brief through every voice (the file's, gloves off, stoic filth, two gears, raw storyteller), side by side with numbers, and a button to make the pick the desk's prompt",
     run: (ctx, args) => ctx.openMic("dialin", args),
   },
   { id: "voice", desks: ["openmic"], usage: "/voice [default|stoic|run|raw]", about: "the stage voice in force, or switch it", run: (ctx, args) => ctx.openMic("voice", args) },

@@ -440,10 +440,68 @@ bit swears and a story about sex or a body says what happened, the linter's
 rule 11 flags a clean bit (skipped when clean edit is on), and the `/five`
 brief asks for it.
 
+**The dumpster fire** (0.3.21, 2026-09-14). The sets were still coming out
+beige and the reason was in the prompt, not the model. The two register
+samples (the Derek bit, the "unlimited" riff) carried one "ass" in 440 words,
+0.2 swears per hundred, and a joyful tone, while the rules above them asked
+for the mouth in every bit; a model copies the samples, not the rules, so a
+Qwen3.5 9B on the old prompt wrote 926 words about rent with no swear in
+them. Samples are also a trap on a small model: asked about the VA, the same
+9B returned the sample VA bit nearly word for word, and the phone's Gemma 4
+E4B heretic, given twelve short sample lines instead, pasted them back as
+the set, one line per bit, and cut every set to 400 words because the lines
+were short. So the stage prompt now carries **no sample bits at all**. The
+voice is rewritten in the user's words: "fuck it, gather round the dumpster
+fire", dark observational comedy with a melancholic edge, the system
+bringing her down and her funnier for it, the badass bitch who does not say
+please and does not bend the knee, sassy, quick, the filth with no off
+switch and tasteful the way a knife is; the mouth's floor is three a bit;
+one bit a set is about sex or her body, said plainly; a (beat) is two a bit
+at most (the stage turns each into a full pause, and a 4B was writing one
+after every sentence); the closer never recaps; and a "register, checked"
+paragraph replaces the samples (if it could air on network television, if it
+describes instead of turning, if the last line is a hug, it is not
+finished). Measured on the Gemma heretic through llama-server with the
+bench, five-minute briefs: old prompt 750 to 950 words at 1.3 to 2.3 swears
+per hundred with hug endings ("the best goddamn view"); the new prompt 590
+to 810 words at 1.7 to 2.0, original names and targets, the tired systemic
+register ("It was about who held the pen", "you're a quarterly payment
+plan"), and the desk's linter-and-rewrite pass keeps the mouth (2.0 before,
+2.1 after). The register lines live in `mira-core.md` (the lab's persona,
+a big model, no pasting) as her stage samples, and the smoke test measures
+them with the bench so they cannot go beige unnoticed; the four persona
+copies say "a melancholy edge, no self-pity" where they said "joyful, never
+bitter". The earlier default survives as the **gloves off** dial. The model
+still sets the ceiling: a 4B writes the register but not many real
+punchlines, and a stock Qwen sands the mouth down whatever the prompt says.
+
+**The asides on a small model** (0.3.22, 2026-09-14). The Gemma heretic
+writes the register now but mishandles the aside in four ways, and the
+parser (`src/openmic/set.js`) takes each of them in its stride rather than
+hoping the prompt lands: she writes "You can put that aside." herself after
+the braces (the stage added its own, so she said it twice; now her line is
+the tag, and a "(You can put that aside.)" written as a direction is
+dropped); she drops the tag into the middle of a sentence ("…look up at
+that bulb, {aside: it's blinking again}", so the lead-in was leaned-in and
+read slow; `splitLines` now cuts the paragraph at a mid-sentence tag and the
+lead-in stays a plain line in her voice); the closer brings the earlier
+asides back as new `{aside: …}` tags (she leaned in and tagged each again;
+an aside whose remark an earlier bit already made, by six-word overlap, is
+now a callback: plain line, no lean, no tag); and she appends a notes list
+under a `***` rule without a heading ("*   **Bit 2:** Added: {aside: …}"),
+which became an extra bit performed with four asides in it (a list line
+that starts "Bit N", "aside N", "closer", "cut", "added", "moved" or "kept",
+or a bare "Notes:", ends the set). She also skipped the aside in about half
+her bits, so the local linter now flags a bit with none (in a set of three
+or more) and the rewrite pass adds it. The prompt's aside rule says the
+same things in words (between two sentences, never the tag yourself, the
+closer's payoffs as plain lines). Smoke fixtures cover all five.
+
 **Dialling the voice in** (2026-09-12). The stage prompt's voice, the two
 paragraphs "Who you are up here" and "The mouth on you", sits between two
-markers in `prompts/open-mic.md`. The file's voice is **gloves off**: the
-raw storyteller meets the filthy, sassy, stoic one. Sexually charged and
+markers in `prompts/open-mic.md`. The file's voice from 0.3.15 to 0.3.20 was
+**gloves off** (the **gloves** dial now): the raw storyteller meets the
+filthy, sassy, stoic one. Sexually charged and
 unbothered about it, adult rated, the observation messenger who takes the
 topic and finds the ugly true thing under it, shines the light on the dark
 however pissed off it makes her, calls out lil dick energy wherever it
@@ -453,9 +511,10 @@ The one rule of the mouth stays: never a slur, never at anyone for what
 they are, and everybody in the sex material is grown. The rules of a bit
 carry "Nothing soft" now, the model linter's rule 12 (`soft`) and the
 local "no softening" check catch the wink, the apology and the moral, and
-a set that has one is rewritten. `src/openmic/voices.js` holds three
-calmer dials to compare against, each swapping into the marked region and
-leaving the rules, the shape and the register samples alone: **stoic
+a set that has one is rewritten. `src/openmic/voices.js` holds four
+dials to compare against, each swapping into the marked region and
+leaving the rules, the shape and the register samples alone: **gloves
+off** (the 0.3.15 default), **stoic
 filth** (the earlier default: calm, deadpan, the filth in the picture, a
 thought under every joke), **two gears** (the flat weather report and the
 incredulous run) and **raw storyteller** (the arena special). `/dialin

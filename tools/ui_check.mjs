@@ -344,7 +344,7 @@ try {
   // the dial-in: one brief through every stage voice, side by side, and a pick that becomes the desk's prompt
   await cdp.eval("__wb.send('/dialin landlords')");
   const bench = await waitFor("(() => { const c = [...document.querySelectorAll('.msg.tool')].pop(); return c && c.querySelector('.bench') && c.querySelectorAll('.bench button.use').length; })()", 60000);
-  check("/dialin wrote the brief through the file's voice and the three dials and laid them side by side with numbers", bench === 4 && (await cdp.eval("[...document.querySelectorAll('.msg.tool')].pop().querySelectorAll('table tr').length")) === 5 && (await cdp.eval("__wb.conv.messages.filter(m => m.kind === 'set' && m.voice).length")) === 4, String(bench));
+  check("/dialin wrote the brief through the file's voice and the four dials and laid them side by side with numbers", bench === 5 && (await cdp.eval("[...document.querySelectorAll('.msg.tool')].pop().querySelectorAll('table tr').length")) === 6 && (await cdp.eval("__wb.conv.messages.filter(m => m.kind === 'set' && m.voice).length")) === 5, String(bench));
   await cdp.eval("[...document.querySelectorAll('.msg.tool')].pop().querySelector('.bench button.use[data-v=\"stoic\"]').click()");
   check("use makes a dial the desk's prompt", (await cdp.eval("__wb.settings.desks.openmic.voice === 'stoic' && /Calm\\. You never raise your voice/.test(__wb.settings.desks.openmic.prompt || '') && /The rules of a bit\\./.test(__wb.settings.desks.openmic.prompt || '')")) === true);
   await cdp.eval("__wb.send('/voice default')");
